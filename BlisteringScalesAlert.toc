@@ -8,5 +8,10 @@
 ## DefaultState: Enabled
 ## SavedVariables: BSADB
 
+## X-License: Licensed under the MIT License. See the LICENSE file in the project root for details.
+## X-Website: https://github.com/Seems-Good/BlisteringScalesAlert
+## X-Curse-Project-ID: 1516216
+## X-Wago-ID: QNlz7xKe
+
 BlisteringScalesAlert.lua
 Settings.lua
