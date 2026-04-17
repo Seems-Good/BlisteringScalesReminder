@@ -11,6 +11,11 @@ local AUG_SPEC_ID = 1473
 local VERSION = "@project-version@"
 local TIMESTAMP = "@project-date-iso@"
 
+-- COLOR CODES (Used to color text)
+local COLOR_YELLOW = "|cffffff00"
+local COLOR_GRAY   = "|cff808080"
+local COLOR_BLUE   = "|cff00ccff"
+local FORMAT_NAME  = COLOR_BLUE .. "BlisteringScalesAlert[ BSA ]|r" .. COLOR_GRAY .. "-(" .. VERSION .. ")|r"
 
 -- Default saved-variable values used when BSADB is absent or missing a key
 local BSA_DEFAULTS = {
@@ -128,6 +133,11 @@ function BSA.SavePosition()
 end
 
 -- ── Internal helpers ──────────────────────────────────────────────────────
+
+local function PrintHelp(cmd, desc)
+    print(COLOR_YELLOW ..  cmd .. "|r" .. COLOR_GRAY .. " - " .. desc .. "|r")
+end
+
 local function LogEvent(tag, detail)
     local log = State.eventLog
     local entry = string.format("[%.1f] %-22s %s", GetTime(), tag, detail or "")
@@ -493,22 +503,23 @@ SlashCmdList["BLISTERINGSCALESALERT"] = function(msg)
         print(string.format("  C_Spell.GetSpellName → %s", tostring(name)))
 
     elseif cmd == "help" or cmd == "commands" then
-        print("|cff00ccff[BSA]-".. VERSION .."|r Commands:")
-        print("  /bsa state    - full state + per-tank buff status")
-        print("  /bsa log      - rolling event log (last 40 events)")
-        print("  /bsa check    - force rescan + buff re-evaluate")
-        print("  /bsa tanks    - list detected tanks and their roles")
-        print("  /bsa show     - force alert visible (UI test)")
-        print("  /bsa hide     - hide alert")
-        print("  /bsa spellid  - verify spell ID → name lookup")
-        print("  /bsa settings - open the settings panel")
-    
+        print(FORMAT_NAME)
+        print("Commands:")
+        PrintHelp("  /bsa state", "full state + per-tank buff status")
+        PrintHelp("  /bsa log", "rolling event log (last 40 events)")
+        PrintHelp("  /bsa check", "force rescan + buff re-evaluate")
+        PrintHelp("  /bsa tanks", "list detected tanks and their roles")
+        PrintHelp("  /bsa show", "force alert visible (UI test)")
+        PrintHelp("  /bsa hide", "hide alert")
+        PrintHelp("  /bsa spellid", "verify spell ID => name lookup")
+        PrintHelp("  /bsa settings", "open the settings panel")
+       
     elseif cmd == "settings" or cmd == "options" or cmd == "config" then
         Settings.OpenToCategory(BSA.settingsCategory:GetID())
     
     else
-        print("|cff00ccff[BSA]-" .. VERSION .. "|r")
-        print("  /bsa help     - list all available commands")
+        print(FORMAT_NAME)
+        PrintHelp("/bsa help", "list all available commands")
         Settings.OpenToCategory(BSA.settingsCategory:GetID())
     end
 end
