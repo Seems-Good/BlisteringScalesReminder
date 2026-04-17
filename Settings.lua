@@ -8,6 +8,7 @@
 -- ── Panel frame ───────────────────────────────────────────────────────────
 local panel = CreateFrame("Frame", "BSASettingsPanel", UIParent)
 panel:SetSize(600, 500)
+panel:Hide()
 
 -- ── Layout constants ──────────────────────────────────────────────────────
 local PAD_L        = 20    -- left margin
@@ -171,14 +172,16 @@ local sizeLabel = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge
 sizeLabel:SetPoint("LEFT", sizeSlider, "RIGHT", 16, 0)
 sizeLabel:SetTextColor(1, 0.82, 0, 1)
 
-sizeSlider:SetScript("OnValueChanged", function(self, value)
+sizeSlider:SetScript("OnValueChanged", function(self, value, userInput)
     local v = math.floor(value + 0.5)
     sizeLabel:SetText(v .. "pt")
-    if BSADB then
+    if userInput and BSADB then
         BSADB.fontSize = v
         if BSA then BSA.ApplySettings() end
     end
 end)
+
+sizeSlider:SetValue(20)
 
 MakeDivider(panel, -219)
 
