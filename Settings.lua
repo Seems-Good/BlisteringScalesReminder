@@ -55,7 +55,7 @@ local title = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
 title:SetPoint("TOPLEFT", panel, "TOPLEFT", PAD_L, -16)
 title:SetTextColor(1, 0.82, 0, 1)
 title:SetFont(title:GetFont(), 16, "OUTLINE")
-title:SetText("Blistering Scales Alert  |cff888888".. VERSION .."|r")
+title:SetText("Blistering Scales Alert [ BSA ] |cff888888".. VERSION .."|r")
 
 MakeDivider(panel, -38)
 
@@ -114,7 +114,7 @@ dragBtn:SetScript("OnClick", function()
             BSA.SavePosition()
         end)
         dragBtn:SetText("|cffff4444Click again to lock|r")
-        print("|cff00ccff[BSA]|r Drag mode ON — grab the alert text and move it, then click the button again to lock.")
+        print("|cff00ccff[BSA]|r Drag mode ON - grab the alert text and move it, then click the button again to lock.")
     end
 end)
 
@@ -261,8 +261,9 @@ versionLabel:SetText("Version:  |cffffd700" .. VERSION .. "|r    Built:  |cffffd
 local repoLabel = panel:CreateFontString(nil, "OVERLAY", "GameFontNormal")
 repoLabel:SetPoint("TOPLEFT", panel, "TOPLEFT", PAD_L, FOOTER_Y - 44)
 repoLabel:SetTextColor(0.7, 0.7, 0.7, 1)
-repoLabel:SetText("Bugs & feature requests:  |cffffd700" .. REPO .. "/issues|r")
+repoLabel:SetText("Bugs & feature requests:  |cffffd700" .. REPO .. "|r")
 
 -- ── Register with WoW's Settings system (12.x) ───────────────────────────
 local category = Settings.RegisterCanvasLayoutCategory(panel, "BlisteringScalesAlert")
 Settings.RegisterAddOnCategory(category)
+BSA.settingsCategory = category

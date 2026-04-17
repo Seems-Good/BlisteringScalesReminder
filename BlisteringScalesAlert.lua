@@ -5,9 +5,9 @@
 
 BSA = BSA or {}   -- shared namespace; Settings.lua reads/writes this
 
-local ADDON_NAME                 = "BlisteringScalesAlert"
+local ADDON_NAME = "BlisteringScalesAlert"
 local BLISTERING_SCALES_SPELL_ID = 360827
-local AUG_SPEC_ID                = 1473
+local AUG_SPEC_ID = 1473
 local VERSION = "@project-version@"
 local TIMESTAMP = "@project-date-iso@"
 
@@ -504,14 +504,11 @@ SlashCmdList["BLISTERINGSCALESALERT"] = function(msg)
         print("  /bsa settings - open the settings panel")
     
     elseif cmd == "settings" or cmd == "options" or cmd == "config" then
-        Settings.OpenToCategory("BlisteringScalesAlert")
-
-
+        Settings.OpenToCategory(BSA.settingsCategory:GetID())
+    
     else
-        Settings.OpenToCategory("BlisteringScalesAlert")
-        print("|cff00ccff[BSA]-" .. VERSION .. "|r Commands:")
+        print("|cff00ccff[BSA]-" .. VERSION .. "|r")
         print("  /bsa help     - list all available commands")
-        print("  /bsa show     - force alert visible (UI test)")
-        print("  /bsa hide     - hide alert")
+        Settings.OpenToCategory(BSA.settingsCategory:GetID())
     end
 end

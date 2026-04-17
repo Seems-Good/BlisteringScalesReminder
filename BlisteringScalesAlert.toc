@@ -3,6 +3,9 @@
 ## Title: BlisteringScalesAlert
 ## Note: BSA!<BlisteringScalesAlert> ~ Simple out of combat Reminder for Blistering Scales
 ## Author: Jeremy-Gstein
+## IconTexture: Interface\Icons\Ability_evoker_blisteringscales
+## Category: Evoker
+## DefaultState: Enabled
 ## SavedVariables: BSADB
 
 BlisteringScalesAlert.lua
