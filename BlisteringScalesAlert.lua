@@ -8,8 +8,8 @@ BSA = BSA or {}   -- shared namespace; Settings.lua reads/writes this
 local ADDON_NAME = "BlisteringScalesAlert"
 local BLISTERING_SCALES_SPELL_ID = 360827
 local AUG_SPEC_ID = 1473
-local VERSION = "@project-version@"
-local TIMESTAMP = "@project-date-iso@"
+local VERSION = "v0.2.2"
+local TIMESTAMP = "2026-04-25T00:00:00Z"
 
 -- COLOR CODES (Used to color text)
 local COLOR_YELLOW = "|cffffff00"
@@ -211,16 +211,17 @@ local function RebuildTankList()
             tostring(IsInGroup() and true or false)))
 end
 
--- In WoW 12.x, aura fields (spellId, isFromPlayerOrPlayerPet, etc.) returned by
--- GetAuraDataBySlot are "secret" numbers/booleans when the aura was applied by
--- another player — comparing them directly causes a taint Lua error.
--- For auras the *local player* applied, those fields are readable normally.
+-- In WoW 12.x, aura fields returned by GetAuraDataBySlot can be "secret"
+-- values for auras applied by other players, causing Lua taint errors when
+-- compared directly. We use pcall to guard against this.
 -- Strategy:
---   • Iterate slots as before.
---   • Wrap both the isFromPlayerOrPlayerPet and spellId checks in a single pcall.
---     - Our own buff  → pcall succeeds, both checks pass → returns true.
---     - Another player's buff → pcall catches the secret-value error → skip slot.
--- This fixes the Lua error and ensures another Aug's Blistering Scales is ignored.
+--   • Iterate slots and check spellId and sourceUnit inside a pcall.
+--   • sourceUnit == "player" is the correct check for whether the *local
+--     player* applied the aura. isFromPlayerOrPlayerPet was unreliable here
+--     because WoW can return true for that field even for another group
+--     member's aura when viewed from the local client's perspective, causing
+--     another Aug Evoker's Blistering Scales to incorrectly suppress the alert.
+--   • If the pcall errors (taint on a foreign aura), we skip the slot safely.
 local function PlayerHasBuffedUnit(unit, spellID)
     if not UnitExists(unit) then return false end
 
@@ -233,9 +234,11 @@ local function PlayerHasBuffedUnit(unit, spellID)
             local data = C_UnitAuras.GetAuraDataBySlot(unit, slot)
             if data then
                 local ok, matched = pcall(function()
-                    -- Both fields are secret for other players' auras; pcall
-                    -- catches any taint error so the loop continues safely.
-                    return data.isFromPlayerOrPlayerPet == true
+                    -- Use sourceUnit to confirm the local player cast this aura.
+                    -- This correctly excludes Blistering Scales cast by another
+                    -- Augmentation Evoker in the group, whose sourceUnit will be
+                    -- their raid/party unit token, not "player".
+                    return data.sourceUnit == "player"
                        and data.spellId == spellID
                 end)
                 if ok and matched then

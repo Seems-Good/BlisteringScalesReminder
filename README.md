@@ -16,7 +16,7 @@ The alert shows the name of the tank or tanks you need to cover, so you do not h
 
 ## Why it is not noise
 
-A lot of reminder addons run constantly and fire events all the time. This one is built to do as little as possible until it is actually needed.
+A lot of all-in-one reminder addons run constantly and fire events all the time. This one is built to do as little as possible until it is actually needed.
 
 The high-frequency aura scanning event is only registered when you are an Augmentation Evoker and you are outside of combat. The moment you pull, the event unregisters entirely. The moment you leave combat it re-registers, checks once, and either shows or stays hidden. There is no polling, no timer, and no repeated scanning during a fight.
 

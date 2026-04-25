@@ -1,7 +1,7 @@
 ## Interface: 120000, 120001, 120005
 ## Version: @project-version@
 ## Title: BlisteringScalesAlert
-## Note: BSA!<BlisteringScalesAlert> ~ Simple out of combat Reminder for Blistering Scales
+## Note: ( /bsa ) - Simple out of combat Reminder for Blistering Scales (Augmentation Evoker)
 ## Author: Jeremy-Gstein
 ## IconTexture: Interface\Icons\Ability_evoker_blisteringscales
 ## Category: Evoker
