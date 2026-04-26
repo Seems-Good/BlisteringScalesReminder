@@ -8,8 +8,8 @@ BSA = BSA or {}   -- shared namespace; Settings.lua reads/writes this
 local ADDON_NAME = "BlisteringScalesAlert"
 local BLISTERING_SCALES_SPELL_ID = 360827
 local AUG_SPEC_ID = 1473
-local VERSION = "v0.2.2"
-local TIMESTAMP = "2026-04-25T00:00:00Z"
+local VERSION = "@project-version@"
+local TIMESTAMP = "@project-date-iso@"
 
 -- COLOR CODES (Used to color text)
 local COLOR_YELLOW = "|cffffff00"
@@ -40,6 +40,7 @@ BSA.COLORS = {
 
 local State = {
     isAugEvoker    = false,
+    hasBlistering  = false,   -- player has the Blistering Scales talent learned
     inCombat       = false,
     tankUnits      = {},
     tankCount      = 0,
@@ -271,12 +272,31 @@ end
 local frame = CreateFrame("Frame", "BSAEventFrame", UIParent)
 local SetWatchedEvents   -- defined fully in the event-gating block below
 
+-- Check whether the player has the Blistering Scales talent learned.
+-- Only meaningful to call when isAugEvoker=true; clears the flag otherwise.
+-- IsPlayerSpell(spellID) returns true only when the spell is in the player's
+-- active spellbook, which requires the talent to be selected. This is
+-- patch-resilient — no hardcoded talent node IDs needed.
+local function UpdateBlisteringTalent()
+    if not State.isAugEvoker then
+        State.hasBlistering = false
+        return
+    end
+    local info = C_Spell.GetSpellInfo(BLISTERING_SCALES_SPELL_ID)
+    local prev = State.hasBlistering
+    State.hasBlistering = IsPlayerSpell(BLISTERING_SCALES_SPELL_ID) and info ~= nil
+    if prev ~= State.hasBlistering then
+        LogEvent("TALENT_CHANGED",
+            State.hasBlistering and "Blistering Scales LEARNED" or "Blistering Scales UNLEARNED")
+    end
+end
+
 local function CheckAndUpdate(trigger)
     State.checkCount = State.checkCount + 1
 
-    if not State.isAugEvoker then
+    if not State.isAugEvoker or not State.hasBlistering then
         State.buffHolderUnit = nil
-        HideAlert("not aug evoker")
+        HideAlert("not aug evoker or no talent")
         return
     end
 
@@ -330,6 +350,11 @@ end
 -- ── Dynamic event gating ──────────────────────────────────────────────────
 -- UNIT_AURA is the only high-frequency event. We only want it while we are
 -- an Augmentation Evoker AND out of combat. Anywhere else it is pure waste.
+-- TRAIT_CONFIG_UPDATED is likewise gated to Aug only — no point tracking
+-- talent changes on specs that can never have Blistering Scales. This event
+-- fires after talents are fully committed server-side (saving talents,
+-- switching loadouts, etc.), unlike PLAYER_TALENT_UPDATE which fires during
+-- UI interaction before the spellbook reflects the new state.
 -- PLAYER_TARGET_CHANGED / PLAYER_FOCUS_CHANGED have been removed entirely:
 -- they fired constantly in combat and were a no-op workaround that is no
 -- longer needed now that UNIT_AURA is filtered to tracked tank tokens only.
@@ -340,6 +365,18 @@ SetWatchedEvents = function()
     else
         frame:UnregisterEvent("UNIT_AURA")
     end
+
+    -- Only track talent changes when confirmed Aug; irrelevant on other specs.
+    -- TRAIT_CONFIG_UPDATED fires after talents are fully committed server-side
+    -- (saving talents, switching loadouts, etc.), so IsPlayerSpell is reliable.
+    -- PLAYER_TALENT_UPDATE fires too early (during UI interaction) and can
+    -- return stale spellbook results.
+    if State.isAugEvoker then
+        frame:RegisterEvent("TRAIT_CONFIG_UPDATED")
+    else
+        frame:UnregisterEvent("TRAIT_CONFIG_UPDATED")
+    end
+
     LogEvent("WATCH_EVENTS", wantAura and "UNIT_AURA=ON" or "UNIT_AURA=OFF")
 end
 
@@ -353,7 +390,8 @@ frame:RegisterEvent("PLAYER_REGEN_ENABLED")
 frame:RegisterEvent("GROUP_ROSTER_UPDATE")
 frame:RegisterEvent("ROLE_CHANGED_INFORM")
 frame:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
--- UNIT_AURA is registered/unregistered dynamically via SetWatchedEvents()
+-- UNIT_AURA and TRAIT_CONFIG_UPDATED are registered/unregistered dynamically
+-- via SetWatchedEvents()
 
 frame:SetScript("OnEvent", function(_, event, arg1, arg2, ...)
     if event == "ADDON_LOADED" and arg1 == ADDON_NAME then
@@ -365,11 +403,13 @@ frame:SetScript("OnEvent", function(_, event, arg1, arg2, ...)
         BSA.InitDB()
         BSA.ApplySettings()
         State.inCombat = UnitAffectingCombat("player") and true or false
-        UpdateSpec()          -- also calls SetWatchedEvents
+        UpdateSpec()               -- also calls SetWatchedEvents
+        UpdateBlisteringTalent()   -- check talent now that spec is known
         RebuildTankList()
         LogEvent("PLAYER_LOGIN",
-            string.format("aug=%s combat=%s tanks=%d fontSize=%d color=%s",
+            string.format("aug=%s talent=%s combat=%s tanks=%d fontSize=%d color=%s",
                 tostring(State.isAugEvoker),
+                tostring(State.hasBlistering),
                 tostring(State.inCombat),
                 State.tankCount,
                 BSADB.fontSize,
@@ -378,14 +418,26 @@ frame:SetScript("OnEvent", function(_, event, arg1, arg2, ...)
 
     elseif event == "PLAYER_ENTERING_WORLD" then
         State.inCombat = UnitAffectingCombat("player") and true or false
-        UpdateSpec()          -- also calls SetWatchedEvents
+        UpdateSpec()               -- also calls SetWatchedEvents
+        UpdateBlisteringTalent()   -- re-check talent on world entry
         RebuildTankList()
         LogEvent("ENTERING_WORLD")
         CheckAndUpdate("ENTERING_WORLD")
 
     elseif event == "PLAYER_SPECIALIZATION_CHANGED" then
-        UpdateSpec()          -- also calls SetWatchedEvents
+        UpdateSpec()               -- also calls SetWatchedEvents
+        UpdateBlisteringTalent()   -- talent availability may have changed with spec
         CheckAndUpdate("SPEC_CHANGED")
+
+    elseif event == "TRAIT_CONFIG_UPDATED" then
+        -- Only fires when isAugEvoker=true (SetWatchedEvents gate).
+        -- arg1 is the configID that was committed. We filter to the class talent
+        -- active config to ignore profession tree commits, which share this event.
+        local configID = arg1
+        local activeID = C_ClassTalents.GetActiveConfigID and C_ClassTalents.GetActiveConfigID()
+        if activeID and configID ~= activeID then return end
+        UpdateBlisteringTalent()
+        CheckAndUpdate("TRAIT_CONFIG_UPDATED")
 
     elseif event == "PLAYER_REGEN_DISABLED" then
         State.inCombat = true
@@ -429,6 +481,7 @@ SlashCmdList["BLISTERINGSCALESALERT"] = function(msg)
     if cmd == "state" or cmd == "debug" then
         print("|cff00ccff[BSA] State dump:|r")
         print(string.format("  isAugEvoker = %s", tostring(State.isAugEvoker)))
+        print(string.format("  hasBlistering = %s", tostring(State.hasBlistering)))
         print(string.format("  inCombat = %s", tostring(State.inCombat)))
         print(string.format("  alertVisible = %s", tostring(State.alertVisible)))
         print(string.format("  tankCount = %d", State.tankCount))
@@ -517,10 +570,10 @@ SlashCmdList["BLISTERINGSCALESALERT"] = function(msg)
         PrintHelp("  /bsa hide", "hide alert")
         PrintHelp("  /bsa spellid", "verify spell ID => name lookup")
         PrintHelp("  /bsa settings", "open the settings panel")
-       
+
     elseif cmd == "settings" or cmd == "options" or cmd == "config" then
         Settings.OpenToCategory(BSA.settingsCategory:GetID())
-    
+
     else
         print(FORMAT_NAME)
         PrintHelp("/bsa help", "list all available commands")
